@@ -8,6 +8,84 @@
 <title>Finanças</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAumtviUywh-t65PowT8knwP59UYHlSXwY",
+  authDomain: "app-financeiro-78b59.firebaseapp.com",
+  projectId: "app-financeiro-78b59",
+  storageBucket: "app-financeiro-78b59.firebasestorage.app",
+  messagingSenderId: "571576955944",
+  appId: "1:571576955944:web:8e74e6b287cdf10edaf11d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const DOC_ID = "meus-dados";
+const REF = doc(db, "financas", DOC_ID);
+
+let syncTimeout = null;
+let isLoading = false;
+
+// Save to Firebase with debounce
+window.syncToFirebase = function() {
+  if (isLoading) return;
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async function() {
+    try {
+      await setDoc(REF, {
+        data: localStorage.getItem('fin_data') || '[]',
+        metas: localStorage.getItem('fin_metas') || '{}',
+        cats: localStorage.getItem('fin_cats') || '{}',
+        dia: localStorage.getItem('fin_dia_ciclo') || '9',
+        updatedAt: Date.now()
+      });
+    } catch(e) {
+      console.error('Sync error:', e);
+    }
+  }, 1000);
+};
+
+// Listen for real-time changes
+onSnapshot(REF, function(snap) {
+  if (!snap.exists()) return;
+  var d = snap.data();
+  var localTs = parseInt(localStorage.getItem('fin_last_sync') || '0');
+  var remoteTs = d.updatedAt || 0;
+  if (remoteTs > localTs) {
+    isLoading = true;
+    if (d.data) localStorage.setItem('fin_data', d.data);
+    if (d.metas) localStorage.setItem('fin_metas', d.metas);
+    if (d.cats) localStorage.setItem('fin_cats', d.cats);
+    if (d.dia) localStorage.setItem('fin_dia_ciclo', d.dia);
+    localStorage.setItem('fin_last_sync', String(remoteTs));
+    isLoading = false;
+    if (typeof render === 'function') render();
+    var pg = document.querySelector('.page.active');
+    if (pg) {
+      var pgName = pg.id.replace('pg-', '');
+      if (pgName === 'registros' && typeof renderRegistros === 'function') renderRegistros();
+      if (pgName === 'invest' && typeof renderInvest === 'function') renderInvest();
+    }
+  }
+});
+
+// Show sync status
+window.addEventListener('load', function() {
+  var indicator = document.createElement('div');
+  indicator.id = 'syncIndicator';
+  indicator.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(61,232,160,0.15);border:1px solid rgba(61,232,160,0.3);color:#3de8a0;font-size:10px;padding:3px 10px;border-radius:20px;z-index:999;display:none;font-family:Space Grotesk,sans-serif';
+  indicator.textContent = '☁️ Sincronizado';
+  document.body.appendChild(indicator);
+  
+  window._showSync = function() {
+    indicator.style.display = 'block';
+    setTimeout(function() { indicator.style.display = 'none'; }, 2000);
+  };
+});
+</script>
 <style>
 :root{--bg:#0a0c12;--s1:#13161f;--s2:#1c2030;--s3:#252a3a;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);--text:#eef0f8;--muted:rgba(238,240,248,0.4);--muted2:rgba(238,240,248,0.65);--green:#3de8a0;--blue:#5b9cf6;--red:#f76e6e;--gold:#f5c842;--purple:#a78bfa;--orange:#fb923c;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -462,13 +540,13 @@ var charts={};
 
 // STORAGE
 function getData(){try{return JSON.parse(localStorage.getItem('fin_data'))||[];}catch(e){return[];}}
-function setData(d){localStorage.setItem('fin_data',JSON.stringify(d));}
+function setData(d){localStorage.setItem('fin_data',JSON.stringify(d));if(typeof syncToFirebase==='function')syncToFirebase();}
 function getMetas(){try{var m=JSON.parse(localStorage.getItem('fin_metas'));if(!m)return{gastos:{},inv:{}};if(!m.gastos)m.gastos={};if(!m.inv)m.inv={};return m;}catch(e){return{gastos:{},inv:{}};}}
-function setMetas(m){localStorage.setItem('fin_metas',JSON.stringify(m));}
+function setMetas(m){localStorage.setItem('fin_metas',JSON.stringify(m));if(typeof syncToFirebase==='function')syncToFirebase();}
 function getCustCats(){try{var c=JSON.parse(localStorage.getItem('fin_cats'));if(!c)return{gastos:{},inv:{}};if(!c.gastos||typeof c.gastos!=='object')c.gastos={};if(!c.inv||typeof c.inv!=='object')c.inv={};return c;}catch(e){return{gastos:{},inv:{}};}}
-function setCustCats(c){localStorage.setItem('fin_cats',JSON.stringify(c));}
+function setCustCats(c){localStorage.setItem('fin_cats',JSON.stringify(c));if(typeof syncToFirebase==='function')syncToFirebase();}
 function getDiaCiclo(){return parseInt(localStorage.getItem('fin_dia_ciclo'))||9;}
-function setDiaCiclo(d){localStorage.setItem('fin_dia_ciclo',String(d));}
+function setDiaCiclo(d){localStorage.setItem('fin_dia_ciclo',String(d));if(typeof syncToFirebase==='function')syncToFirebase();}
 function getCG(){var c=getCustCats();var r={};var k;for(k in CATS)r[k]=CATS[k];for(k in c.gastos)r[k]=c.gastos[k];return r;}
 function getCI(){var c=getCustCats();var r={};var k;for(k in INVS)r[k]=INVS[k];for(k in c.inv)r[k]=c.inv[k];return r;}
 
