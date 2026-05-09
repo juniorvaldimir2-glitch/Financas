@@ -951,11 +951,27 @@ function buildCatFilterSelect() {
 }
 
 function filterByCat(cat) {
-  goPage('registros', document.querySelector('.nav-btn:nth-child(2)'));
-  setFilter('tudo', document.querySelector('#pg-registros .fbtn:nth-child(5)'));
-  var sel = document.getElementById('catFilter');
-  if (sel) { sel.value = cat; }
-  renderRegistros();
+  // Navigate to registros
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('pg-registros').classList.add('active');
+  var navBtns = document.querySelectorAll('.nav-btn');
+  if (navBtns[1]) navBtns[1].classList.add('active');
+  document.getElementById('fabBtn').style.display = 'flex';
+  // Set filter to tudo
+  filterMode = 'tudo';
+  document.querySelectorAll('#pg-registros .fbtn').forEach(function(b) { b.classList.remove('active'); });
+  var fbts = document.querySelectorAll('#pg-registros .fbtn');
+  if (fbts[4]) fbts[4].classList.add('active');
+  document.getElementById('customRange').style.display = 'none';
+  document.getElementById('monthLabel').textContent = 'Todo o período';
+  // Set category filter
+  buildCatFilterSelect();
+  setTimeout(function() {
+    var sel = document.getElementById('catFilter');
+    if (sel) sel.value = cat;
+    renderRegistros();
+  }, 50);
 }
 
 function renderRegistros() {
