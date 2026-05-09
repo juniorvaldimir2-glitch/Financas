@@ -648,6 +648,7 @@ function setFilter(mode,btn){
   else if(mode==='ano')lbl.textContent='Ano '+now.getFullYear();
   else if(mode==='tudo')lbl.textContent='Todo o período';
   else lbl.textContent='Período personalizado';
+  if(mode!=='custom')updateKpis();
   renderRegistros();
 }
 
@@ -775,11 +776,32 @@ function renderResumo(){
   }).join('');}
 }
 
+function updateKpis(){
+  var range=getRange();
+  var all=getData().filter(function(r){return inRange(r,range.from,range.to);});
+  var rec=sum(all,'receita');var gas=sum(all,'gasto');var inv=sum(all,'inv');var sal=rec-gas-inv;
+  document.getElementById('kpiRec').textContent=fmt(rec);
+  document.getElementById('kpiGas').textContent=fmt(gas);
+  document.getElementById('kpiSal').textContent=fmt(sal);
+  document.getElementById('kpiSal').style.color=sal>=0?'var(--green)':'var(--red)';
+  document.getElementById('kpiInv').textContent=fmt(inv);
+  // Update header label for custom range
+  if(filterMode==='custom'){
+    var s=document.getElementById('dtIni').value;var e=document.getElementById('dtFim').value;
+    if(s&&e){
+      var ds=toDate(s).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+      var de=toDate(e).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+      document.getElementById('monthLabel').textContent=ds+' – '+de;
+    }
+  }
+}
+
 function renderRegistros(){
   buildCatFilterSelect();
   var catF=document.getElementById('catFilter')?document.getElementById('catFilter').value:'';
   var tipoF=document.getElementById('tipoFilter')?document.getElementById('tipoFilter').value:'';
   var range=getRange();
+  updateKpis();
   var all=getData().filter(function(r){return inRange(r,range.from,range.to);});
   if(catF)all=all.filter(function(r){return r.cat===catF;});
   if(tipoF)all=all.filter(function(r){return r.tipo===tipoF;});
