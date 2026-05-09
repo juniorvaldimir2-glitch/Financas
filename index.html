@@ -147,6 +147,13 @@ body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-ser
     <div class="cwrap"><canvas id="pieChart"></canvas></div>
     <div class="legend" id="pieLegend"></div>
   </div>
+  <div id="catDetalhe" style="display:none;margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="stitle" style="margin:0" id="catDetalheTitulo">Categoria</div>
+      <button onclick="fecharDetalhe()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">×</button>
+    </div>
+    <div class="card" id="catDetalheList"></div>
+  </div>
   <div class="stitle" style="margin-top:14px">Metas de gastos</div>
   <div class="card" id="metaGastoRes"></div>
   <div class="stitle" style="margin-top:14px">Metas de investimento</div>
@@ -653,23 +660,31 @@ function setAnalise(mode,btn){
 }
 
 function filterByCat(catKey){
-  // Go to registros
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
-  document.getElementById('pg-registros').classList.add('active');
-  document.querySelectorAll('.nb')[1].classList.add('active');
-  document.getElementById('fabBtn').style.display='flex';
-  // Set filter to tudo
-  filterMode='tudo';
-  document.querySelectorAll('#filterBtns .fbtn').forEach(function(b){b.classList.remove('active');});
-  document.querySelectorAll('#filterBtns .fbtn')[4].classList.add('active');
-  document.getElementById('customRange').style.display='none';
-  document.getElementById('monthLabel').textContent='Todo o período';
-  // Build select and set category
-  buildCatFilterSelect();
-  document.getElementById('catFilter').value=catKey;
-  document.getElementById('tipoFilter').value='gasto';
-  renderRegistros();
+  var cg=getCG();var cat=cg[catKey]||CATS.outros;
+  var all=getData().filter(function(r){return r.cat===catKey&&r.tipo==='gasto'&&inMonth(r,viewDate);});
+  all.sort(function(a,b){return new Date(b.data)-new Date(a.data);});
+
+  var titulo=document.getElementById('catDetalheTitulo');
+  var lista=document.getElementById('catDetalheList');
+  var painel=document.getElementById('catDetalhe');
+
+  titulo.textContent=cat.icon+' '+cat.label+' — '+MESES[viewDate.getMonth()];
+
+  if(!all.length){
+    lista.innerHTML='<div class="empty"><div class="empty-i">📋</div>Nenhum gasto nesta categoria este mês</div>';
+  } else {
+    var total=all.reduce(function(a,r){return a+r.valor;},0);
+    lista.innerHTML=all.map(function(r){
+      var dt=toDate(r.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+      return '<div class="item"><div class="iico" style="background:'+cat.color+'20">'+cat.icon+'</div><div class="ibody"><div class="iname">'+r.desc+'</div><div class="imeta">'+dt+'</div></div><div class="ival" style="color:var(--red)">'+fmt(r.valor)+'</div></div>';
+    }).join('')+'<div style="display:flex;justify-content:space-between;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px"><span style="font-size:12px;font-weight:500;color:var(--muted2)">Total</span><span style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:500;color:var(--red)">'+fmt(total)+'</span></div>';
+  }
+  painel.style.display='block';
+  painel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function fecharDetalhe(){
+  document.getElementById('catDetalhe').style.display='none';
 }
 
 function buildCatFilterSelect(){
