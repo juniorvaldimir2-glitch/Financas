@@ -11,7 +11,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAumtviUywh-t65PowT8knwP59UYHlSXwY",
@@ -81,10 +81,31 @@ function startSync(uid) {
 }
 
 window.fazerLogin = async function() {
-  try {
-    await signInWithPopup(auth, provider);
-  } catch(e) { console.error('Login error:', e); }
+  var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch(e) {
+      console.error('Redirect error:', e);
+    }
+  } else {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch(e) {
+      console.error('Popup error:', e);
+      await signInWithRedirect(auth, provider);
+    }
+  }
 };
+
+// Handle redirect result
+getRedirectResult(auth).then(function(result) {
+  if (result && result.user) {
+    console.log('Logged in via redirect:', result.user.email);
+  }
+}).catch(function(e) {
+  console.error('Redirect result error:', e);
+});
 
 window.fazerLogout = async function() {
   if (unsubscribe) unsubscribe();
