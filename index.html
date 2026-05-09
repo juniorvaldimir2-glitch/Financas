@@ -885,11 +885,7 @@ function renderResumo() {
   var total = 0;
   var k;
   for (k in byCat) { if (byCat[k] > 0) { var c = cg[k] || CATS_BASE.outros; labels.push(c.label); data.push(byCat[k]); colors.push(c.color); total += byCat[k]; } }
-  var catKeysLeg = Object.keys(byCat).filter(function(k){return byCat[k]>0;});
-  document.getElementById('pieLegend').innerHTML = labels.map(function(l,i) {
-    return '<div class="leg-item" onclick="filterByCat(''+catKeysLeg[i]+'')" style="cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">' +
-      '<div class="leg-dot" style="background:' + colors[i] + '"></div>' + l + ' ' + (total > 0 ? (data[i]/total*100).toFixed(0) + '%' : '') + '</div>';
-  }).join('');
+  
   var pieWrap = document.getElementById('pieChart').parentElement;
   if (charts.pie) { charts.pie.destroy(); delete charts.pie; }
   if (data.length) {
@@ -898,7 +894,8 @@ function renderResumo() {
       pieWrap.innerHTML = '<canvas id="pieChart"></canvas>';
     }
     var canvas = document.getElementById('pieChart');
-    charts.pie = new Chart(canvas, {type:'doughnut', data:{labels:labels, datasets:[{data:data, backgroundColor:colors, borderWidth:2, borderColor:'#13161f', hoverOffset:4}]}, options:{responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+fmt(c.raw);}}}}}});
+    window._pieKeys = Object.keys(byCat).filter(function(k){return byCat[k]>0;});
+    charts.pie = new Chart(canvas, {type:'doughnut', data:{labels:labels, datasets:[{data:data, backgroundColor:colors, borderWidth:2, borderColor:'#13161f', hoverOffset:4}]}, options:{responsive:true, maintainAspectRatio:false, cutout:'60%', onClick:function(e,els){if(els&&els.length>0){filterByCat(window._pieKeys[els[0].index]);}}, plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+fmt(c.raw)+' (clique para ver)';}}}}}});
   } else {
     pieWrap.innerHTML = '<canvas id="pieChart"></canvas><div class="empty"><div class="empty-i">📊</div>Sem gastos registrados</div>';
   }
